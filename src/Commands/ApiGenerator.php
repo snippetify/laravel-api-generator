@@ -335,7 +335,32 @@ class ApiGeneratorGenerator extends Command
             $module, 
             $model,
             'stubs/DummyFactory.stub', 
-            "database/factories/{$module}/{$model}Factory.php"
+            "database/factories/{$module}/{$model}Factory.php",
+            function ($value) use ($item) {
+                $definitions = '';
+
+                // Foreach attributes and set definitions
+                foreach (Arr::get($item, 'model.attributes') as $key => $items) {
+                    // Casts items
+                    switch ($items['type']) {
+                        case 'boolean':
+                            $definitions .= "\$this->faker->randomElement([true, false]),\n";
+                            break;
+                        case 'int':
+                        case 'float':
+                        case 'double':
+                        case 'integer':
+                            $definitions .= "\$this->faker->randomElement([true, false]),\n";
+                            break;
+                        default:
+                            $definitions .= "\$this->faker->word,\n";
+                    }
+                }
+
+                return Str::of($value)
+                    ->replace("%%definitions%%", $definitions)
+                ;
+            }
         );
     }
 
