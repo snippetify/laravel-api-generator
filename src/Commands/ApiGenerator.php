@@ -276,7 +276,19 @@ class ApiGeneratorGenerator extends Command
             $module, 
             $model,
             'stubs/DummyRequest.stub', 
-            "app/Http/Requests/{$module}/{$model}Request.php"
+            "app/Http/Requests/{$module}/{$model}Request.php",
+            function ($value) use ($item) {
+                $definitions = '';
+
+                // Foreach attributes and set definitions
+                foreach (Arr::get($item, 'model.attributes') as $key => $items) {
+                    $definitions .= "'{$key}' => '{$items['rules']}',";
+                }
+
+                return Str::of($value)
+                    ->replace("%%definitions%%", $definitions)
+                ;
+            }
         );
     }
 
@@ -341,19 +353,18 @@ class ApiGeneratorGenerator extends Command
 
                 // Foreach attributes and set definitions
                 foreach (Arr::get($item, 'model.attributes') as $key => $items) {
-                    // Casts items
                     switch ($items['type']) {
                         case 'boolean':
-                            $definitions .= "\$this->faker->randomElement([true, false]),\n";
+                            $definitions .= "'{$key}' => \$this->faker->randomElement([true, false]),\n";
                             break;
                         case 'int':
                         case 'float':
                         case 'double':
                         case 'integer':
-                            $definitions .= "\$this->faker->randomElement([true, false]),\n";
+                            $definitions .= "'{$key}' => \$this->faker->randomElement([true, false]),\n";
                             break;
                         default:
-                            $definitions .= "\$this->faker->word,\n";
+                            $definitions .= "'{$key}' => \$this->faker->word,\n";
                     }
                 }
 

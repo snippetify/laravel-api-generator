@@ -27,7 +27,7 @@ class ModelNameRequest extends FormRequest
     public function rules()
     {
         return [
-            // Rules
+            %%definitions%%
         ];
     }
 }
