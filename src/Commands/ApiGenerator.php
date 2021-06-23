@@ -321,7 +321,50 @@ class ApiGeneratorGenerator extends Command
             ->contains(function ($value) use ($table) {
                 return Str::of($value)->contains($table);
         })) {
-            $this->call('make:migration', ['name' => "create_{$table}_table"]);
+            // $this->call('make:migration', ['name' => "create_{$table}_table"]);
+            $filename = date('Y_m_d_his')."_create_{$table}_table";
+            $this->makeFile(
+                $module,
+                $model,
+                'stubs/DummyDatabaseMigration.stub',
+                "database/migrations/{$filename}.php",
+                function ($value) use ($table) {
+                    $definitions = '';
+    
+                    // Foreach attributes and set definitions
+                    foreach (Arr::get($item, 'model.attributes') as $key => $items) {
+                        switch ($items['type']) {
+                            case 'boolean':
+                                $definitions .= "\$table->boolean('{$key}')";
+                                break;
+                            case 'float':
+                                $definitions .= "\$table->float('{$key}')";
+                                break;
+                            case 'double':
+                                $definitions .= "\$table->double('{$key}')";
+                                break;
+                            case 'int':
+                            case 'integer':
+                            case 'numeric':
+                                $definitions .= "\$table->integer('{$key}')";
+                                break;
+                            default:
+                                $definitions .= Str::contains($items['rules'], 'max:') ? 
+                                    "\$table->string('{$key}')" : "\$table->text('{$key}')";
+                        }
+                        if (!Str::contains($items['rules'], 'required')) {
+                            $definitions .= '->nullable()';
+                        }
+                        $definitions .= ";\n";
+                    }
+    
+                    return Str::of($value)
+                        ->replace("%%definitions%%", $definitions)
+                        ->replace("%%snake_name%%", Str::snake($table))
+                        ->replace("%%StudlyName%%", Str::studly($table))
+                    ;
+                }
+            );
         }
     }
 
