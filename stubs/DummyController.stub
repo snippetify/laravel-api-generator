@@ -73,33 +73,9 @@ class ModelNameController extends Controller
     {
         return array_merge($filters, [
             AllowedFilter::trashed(),
+            AllowedFilter::scope('filter', 'filter'),
             AllowedFilter::scope('user', 'whereUser')
         ]);
-    }
-
-    /**
-     * Filter
-     * Filter the listing of the resource.
-     *
-     * @queryParam filter[q] Field to filter resource by keyword.
-     * @queryParam filter[trashed] Field to filter resource by trashed.
-     * @queryParam sort Field to sort resource by created, updated. Example: -updated
-     * @queryParam page Field for pagination. Example: 1
-     * @queryParam limit Field for limit. Example: 50
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function filter(Request $request)
-    {
-        $this->authorize('viewAny', [
-            ModelName::class,
-            $request->input('filter.trashed')
-        ]);
-
-        return ApiResource::collection(
-            ModelName::filter($request->input('filter.q', ' '))->paginate($request->input('limit', 50))->appends($request->query())
-        );
     }
 
     /**
@@ -158,26 +134,30 @@ class ModelNameController extends Controller
     }
 
     /**
-     * Mass Toggle activated
-     * Toggle activated property many resources from storage.
+     * Mass Toggle
+     * Toggle property many resources from storage.
      *
      * @authenticated
+     * @bodyParam property string required The items's property of the resources. Example: is_activated
      * @bodyParam items array required The items's id of the resources. Example: [1,2,3]
      * @bodyParam activate boolean Activate or desactivate the resource. Example: true
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\Response
      */
-    public function massToggleActivated(Request $request)
+    public function massToggle(Request $request)
     {
+        $property = $request->input('property', null);
         $activated = $request->input('activate', false);
 
-        collect($request->input('items', []))->each(function ($id) use ($activated) {
-            $model = ModelName::findOrFail($id);
-            $this->authorize('update', $model);
-            $model->is_activated = $activated;
-            $model->save();
-        });
+        if ($property) {
+            collect($request->input('items', []))->each(function ($id) use ($activated) {
+                $model = ModelName::findOrFail($id);
+                $this->authorize('update', $model);
+                $model->{$property} = $activated;
+                $model->save();
+            });
+        }
 
         return response()->json([], Response::HTTP_NO_CONTENT);
     }
