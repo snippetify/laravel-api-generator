@@ -1,0 +1,91 @@
+<?php
+
+namespace App\Models\ModuleName;
+
+use Spatie\MediaLibrary\HasMedia;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+
+use App\Traits\HasLogsTrait;
+use App\Traits\HasUserTrait;
+use App\Traits\CreateInstanceTrait;
+%%importtraits%%
+
+class ModelName extends Model %%implementsHasMedia%%
+{
+    use HasFactory;
+    use SoftDeletes;
+    use HasLogsTrait;
+    use HasUserTrait;
+    use CreateInstanceTrait;
+    %%usetraits%%
+
+    /**
+     * The attributes that aren't mass assignable.
+     *
+     * @var array
+     */
+    protected $guarded = [
+        'id', 'deleted_at', 'updated_at', 'created_at'
+    ];
+
+    /**
+     * The relationships that should always be loaded.
+     *
+     * @var array
+     */
+    protected $with = [
+        //
+    ];
+
+    /**
+     * The attributes that should be hidden for arrays.
+     *
+     * @var array
+     */
+    protected $hidden = [
+        'deleted_at'
+    ];
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        //
+    ];
+
+    /**
+     * The model's cast values for attributes.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'deleted_at' => 'timestamp',
+        'updated_at' => 'timestamp',
+        'created_at' => 'timestamp',
+    ];
+
+
+    /**
+	 * Create a new factory instance for the model.
+	 *
+	 * @return \Illuminate\Database\Eloquent\Factories\Factory
+	 */
+	protected static function newFactory()
+	{
+	    return \Database\Factories\ModuleName\ModelNameFactory::new();
+	}
+
+
+    /**
+     * Filter scope
+     */
+    public function scopeFilter(Builder $builder, $keyword)
+    {
+        // return $builder->where('your_field', 'like', "$keyword%");
+    }
+}

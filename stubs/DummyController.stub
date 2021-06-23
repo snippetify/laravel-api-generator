@@ -1,0 +1,253 @@
+<?php
+
+namespace App\Http\Controllers\ModuleName;
+
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use App\Http\Controllers\Controller;
+use Spatie\QueryBuilder\AllowedSort;
+use Spatie\QueryBuilder\QueryBuilder;
+use Spatie\QueryBuilder\AllowedFilter;
+
+use App\Models\ModuleName\ModelName;
+use App\Http\Requests\ModuleName\ModelNameRequest;
+use App\Http\Resources\ModuleName\ModelName as ApiResource;
+
+/**
+ * @group ModelName management
+ *
+ * APIs for managing ModelNames
+ */
+class ModelNameController extends Controller
+{
+    /**
+     * Instantiate a new controller instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->middleware('auth:sanctum');
+    }
+
+    /**
+     * List
+     * Display a listing of the resource.
+     *
+     * @queryParam filter[user] Field to filter resource by user id.
+     * @queryParam filter[trashed] Field to filter resource by trashed.
+     * @queryParam sort Field to sort resource by created, updated. Example: -updated
+     * @queryParam page Field for pagination. Example: 1
+     * @queryParam limit Field for limit. Example: 50
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function index(Request $request)
+    {
+        $this->authorize('viewAny', [
+            ModelName::class,
+            $request->input('filter.trashed')
+        ]);
+
+        return ApiResource::collection(
+            QueryBuilder::for(ModelName::class)
+                ->allowedFilters($this->allowedFilters())
+                ->defaultSort('-created_at')
+                ->allowedSorts([
+                    AllowedSort::field('created', 'created_at'),
+                    AllowedSort::field('updated', 'updated_at'),
+                ])
+                ->allowedIncludes([])
+                ->allowedAppends([])
+                ->paginate($request->input('limit', 10))
+                ->appends($request->query())
+        );
+    }
+    
+    /**
+     * Get allowed Filters
+     *
+     * @return Array
+     */
+    private function allowedFilters(array $filters = array())
+    {
+        return array_merge($filters, [
+            AllowedFilter::trashed(),
+            AllowedFilter::scope('user', 'whereUser')
+        ]);
+    }
+
+    /**
+     * Filter
+     * Filter the listing of the resource.
+     *
+     * @queryParam filter[q] Field to filter resource by keyword.
+     * @queryParam filter[trashed] Field to filter resource by trashed.
+     * @queryParam sort Field to sort resource by created, updated. Example: -updated
+     * @queryParam page Field for pagination. Example: 1
+     * @queryParam limit Field for limit. Example: 50
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function filter(Request $request)
+    {
+        $this->authorize('viewAny', [
+            ModelName::class,
+            $request->input('filter.trashed')
+        ]);
+
+        return ApiResource::collection(
+            ModelName::filter($request->input('filter.q', ' '))->paginate($request->input('limit', 50))->appends($request->query())
+        );
+    }
+
+    /**
+     * Create
+     * Store a newly created resource in storage.
+     *
+     * @authenticated
+     * @bodyParam __param__ string required The __param__ of the resource. Example: foo
+     * @bodyParam __param__ integer The __param__ of the resource. Example: 1
+     * @bodyParam __param__ array required The __param__ of the resource. Example: [foo, bar]
+     *
+     * @param  \App\Http\Requests\ModuleName\ModelNameRequest  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function store(ModelNameRequest $request)
+    {
+        $model = ModelName::create($request->validated());
+        
+        return response()->json($model->only(['id', 'slug']), Response::HTTP_CREATED);
+    }
+
+    /**
+     * Show
+     * Display the specified resource.
+     *
+     * @urlParam id required The ID of the resource. Example: 1
+     *
+     * @param  \App\Models\ModuleName\ModelName  $model
+     * @return \Illuminate\Http\Response
+     */
+    public function show(ModelName $model)
+    {
+        $this->authorize('view', $model);
+
+        return new ApiResource($model);
+    }
+
+    /**
+     * Update
+     * Update the specified resource in storage.
+     *
+     * @authenticated
+     * @bodyParam id integer required The id of the resource. Example: 1
+     * @bodyParam __param__ string required The __param__ of the resource. Example: foo
+     * @bodyParam __param__ array required The __param__ of the resource. Example: [foo, bar]
+     *
+     * @param  \App\Http\Requests\ModuleName\ModelNameRequest  $request
+     * @param  \App\Models\ModuleName\ModelName  $model
+     * @return \Illuminate\Http\Response
+     */
+    public function update(ModelNameRequest $request, ModelName $model)
+    {
+        $model->update($request->validated());
+
+        return response()->json($model->only(['id', 'slug']), Response::HTTP_ACCEPTED);
+    }
+
+    /**
+     * Mass Toggle activated
+     * Toggle activated property many resources from storage.
+     *
+     * @authenticated
+     * @bodyParam items array required The items's id of the resources. Example: [1,2,3]
+     * @bodyParam activate boolean Activate or desactivate the resource. Example: true
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function massToggleActivated(Request $request)
+    {
+        $activated = $request->input('activate', false);
+
+        collect($request->input('items', []))->each(function ($id) use ($activated) {
+            $model = ModelName::findOrFail($id);
+            $this->authorize('update', $model);
+            $model->is_activated = $activated;
+            $model->save();
+        });
+
+        return response()->json([], Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Delete
+     * Remove the specified resource from storage.
+     *
+     * @authenticated
+     * @urlParam id required The ID of the resource. Example: 1
+     * @bodyParam force_delete boolean Delete the resource for ever. Example: true
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\ModuleName\ModelName  $model
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy(Request $request, ModelName $model)
+    {
+        $force = $request->input('force_delete', false);
+
+        $this->authorize($force ? 'forceDelete' : 'delete', $model);
+
+        $force ? $model->forceDelete() : $model->delete();
+
+        return response()->json([], Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Mass Deletion
+     * Remove many resources from storage.
+     *
+     * @authenticated
+     * @urlParam ids string required The ids of the resources separated by a ,. Example: 1,2,3
+     * @bodyParam force_delete boolean Delete the resource for ever. Example: true
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function massDestroy(Request $request)
+    {
+        $force = $request->input('force_delete', false);
+        
+        collect(explode(',', $request->input('ids', '')))->each(function ($id) use ($force) {
+            $model = ModelName::findOrFail((int)$id);
+            $this->authorize($force ? 'forceDelete' : 'delete', $model);
+            $force ? $model->forceDelete() : $model->delete();
+        });
+
+        return response()->json([], Response::HTTP_NO_CONTENT);
+    }
+
+    /**
+     * Restore
+     * Restore the specified resource from storage.
+     *
+     * @authenticated
+     * @urlParam id required The ID of the resource. Example: 1
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function restore(Request $request, $id)
+    {
+        $model = ModelName::withTrashed()->findOrFail($id);
+
+        $this->authorize('restore', $model);
+        
+        $model->restore();
+        
+        return response()->json([], Response::HTTP_NO_CONTENT);
+    }
+}

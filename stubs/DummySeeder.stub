@@ -1,0 +1,19 @@
+<?php
+
+namespace Database\Seeders\ModuleName;
+
+use App\Models\ModuleName\ModelName;
+use Illuminate\Database\Seeder;
+
+class ModelNameSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     *
+     * @return void
+     */
+    public function run()
+    {
+        ModelName::factory()->times(20)->create();
+    }
+}

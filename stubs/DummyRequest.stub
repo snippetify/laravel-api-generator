@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Http\Requests\ModuleName;
+
+use App\Models\ModuleName\ModelName;
+use Illuminate\Foundation\Http\FormRequest;
+
+class ModelNameRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     *
+     * @return bool
+     */
+    public function authorize()
+    {
+        $model = ModelName::find($this->route('model')['id'] ?? $this->route('model'));
+
+        return $model ? $this->user()->can('update', $model) : $this->user()->can('create', ModelName::class);
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array
+     */
+    public function rules()
+    {
+        return [
+            // Rules
+        ];
+    }
+}

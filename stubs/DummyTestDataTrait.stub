@@ -1,0 +1,437 @@
+<?php
+
+namespace Tests\Feature\Data\ModuleName;
+
+use App\Models\User\User;
+use App\Enums\Privilege;
+use Illuminate\Support\Str;
+use App\Models\ModuleName\ModelName;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Response;
+
+trait ModelNameTestDataTrait
+{
+    /**
+     * List data provider.
+     *
+     * @return Illuminate\Support\Collection[]
+     */
+    public function provideListData()
+    {
+        $page   = 2;
+        $limit  = 5;
+        $format = '%s?%s';
+
+        yield 'List' => [
+            function () use($format, $page, $limit): Collection {
+                return Collection::make([
+                    'user' => User::factory()->superAdmin()->create(),
+                    'uri' => $this->endpointWithParam(null, null, ['limit' => $limit, 'page' => $page])
+                ]);
+            },
+            function () use($page, $limit): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_OK,
+                    'data' => [
+                        'meta' => [
+                            'per_page' => $limit,
+                            'current_page' => $page,
+                            'total' => ModelName::count()
+                        ]
+                    ]
+                ]);
+            }
+        ];
+
+        yield 'List Forbidden' => [
+            function () use($format): Collection {
+                return Collection::make([
+                    'user' => User::factory()->create(),
+                    'uri' => $this->endpointWithParam(null, null, ['filter' => ['trashed' => 'only']])
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_FORBIDDEN,
+                    'data' => []
+                ]);
+            }
+        ];
+    }
+
+    /**
+     * Show data provider.
+     *
+     * @return Illuminate\Support\Collection[]
+     */
+    public function provideShowData()
+    {
+        yield 'Show' => [
+            function (): Collection {
+                return Collection::make([
+                    'user' => User::factory()->superAdmin()->create(),
+                    'uri' => $this->endpointWithParam(ModelName::factory()->create()->id)
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_OK,
+                    'data' => []
+                ]);
+            }
+        ];
+
+        yield 'Show Forbidden' => [
+            function (): Collection {
+            	$model = ModelName::factory()->create();
+            	$model->delete();
+                return Collection::make([
+                    'user' => User::factory()->create(),
+                    'uri' => $this->endpointWithParam($model->id)
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_FORBIDDEN,
+                    'data' => []
+                ]);
+            }
+        ];
+    }
+
+    /**
+     * Store data provider.
+     *
+     * @return \Closure[]
+     */
+    public function provideStoreData()
+    {
+        yield 'As Super Admin' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpoint,
+                    'user' => User::factory()->superAdmin()->create(),
+                    'payload' => ModelName::factory()->definition(),
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_CREATED,
+                    'data' => ['id' => ModelName::all()->first()->id]
+                ]);
+            }
+        ];
+
+        yield 'As Admin with privileges' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpoint,
+                    'user' => User::factory()->adminWithPrivileges(ModelName::class, Privilege::CREATE)->create(),
+                    'payload' => ModelName::factory()->definition(),
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_CREATED,
+                    'data' => ['id' => ModelName::all()->first()->id]
+                ]);
+            }
+        ];
+
+        if (method_exists(ModelName::class, 'getMedia')) {
+            yield 'With image and log' => [
+                function (): Collection {
+                    $image = UploadedFile::fake()->image('image.jpg')->size(1);
+                    return Collection::make([
+                        'uri' => $this->endpoint,
+                        'user' => User::factory()->superAdmin()->create(),
+                        'payload' => collect(ModelName::factory()->definition())->put('image', $image)->all(),
+                    ]);
+                },
+                function (): Collection {
+                    $model = ModelName::all()->first();
+                    $path  = Str::after($model->image, 'storage/');
+                    return Collection::make([
+                        'status' => Response::HTTP_CREATED,
+                        'data' => ['id' => $model->id],
+                        'log' => $model->activities->count() == 1,
+                        'image' => $model->getMedia('image')->count() == 1 && Storage::disk('public')->assertExists($path)
+                    ]);
+                }
+            ];
+        }
+
+        yield 'Invalid Values' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpoint,
+                    'user' => User::factory()->superAdmin()->create(),
+                    'payload' => ['title' => ''],
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                    'data' => []
+                ]);
+            }
+        ];
+
+        if (method_exists(ModelName::class, 'getMedia')) {
+            yield 'With image and log Invalid Values' => [
+                function (): Collection {
+                    $image = UploadedFile::fake()->image('image.jpg')->size(10026);
+                    return Collection::make([
+                        'uri' => $this->endpoint,
+                        'user' => User::factory()->superAdmin()->create(),
+                        'payload' => collect(ModelName::factory()->definition())->put('image', $image)->all(),
+                    ]);
+                },
+                function (): Collection {
+                    return Collection::make([
+                        'status' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                        'data' => []
+                    ]);
+                }
+            ];
+        }
+
+        yield 'Forbidden' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpoint,
+                    'user' => User::factory()->create(),
+                    'payload' => ModelName::factory()->definition(),
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_FORBIDDEN,
+                    'data' => []
+                ]);
+            }
+        ];
+    }
+
+    /**
+     * Update data provider.
+     *
+     * @return \Closure[]
+     */
+    public function provideUpdateData()
+    {
+        yield 'As Super Admin' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpointWithParam(ModelName::factory()->create()->id),
+                    'user' => User::factory()->superAdmin()->create(),
+                    'payload' => ModelName::factory()->definition(),
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_ACCEPTED,
+                    'data' => ['id' => ModelName::all()->first()->id]
+                ]);
+            }
+        ];
+
+        yield 'As Admin with privileges' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpointWithParam(ModelName::factory()->create()->id),
+                    'user' => User::factory()->adminWithPrivileges(ModelName::class, Privilege::UPDATE)->create(),
+                    'payload' => ModelName::factory()->definition(),
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_ACCEPTED,
+                    'data' => ['id' => ModelName::all()->first()->id]
+                ]);
+            }
+        ];
+
+        if (method_exists(ModelName::class, 'getMedia')) {
+            yield 'With image and log' => [
+                function (): Collection {
+                    $image = UploadedFile::fake()->image('image.jpg')->size(1);
+                    return Collection::make([
+                        'uri' => $this->endpointWithParam(ModelName::factory()->create()->id),
+                        'user' => User::factory()->superAdmin()->create(),
+                        'payload' => collect(ModelName::factory()->definition())->put('image', $image)->all(),
+                    ]);
+                },
+                function (): Collection {
+                    $model = ModelName::all()->first();
+                    $path  = Str::after($model->image, 'storage/');
+                    return Collection::make([
+                        'status' => Response::HTTP_ACCEPTED,
+                        'data' => ['id' => $model->id],
+                        'log' => $model->activities->count() == 2,
+                        'image' => $model->getMedia('image')->count() == 1 && Storage::disk('public')->assertExists($path)
+                    ]);
+                }
+            ];
+        }
+
+        yield 'Invalid Values' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpointWithParam(ModelName::factory()->create()->id),
+                    'user' => User::factory()->superAdmin()->create(),
+                    'payload' => ['title' => ''],
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                    'data' => []
+                ]);
+            }
+        ];
+
+        if (method_exists(ModelName::class, 'getMedia')) {
+            yield 'With image and log Invalid Values' => [
+                function (): Collection {
+                    $image = UploadedFile::fake()->image('image.jpg')->size(10026);
+                    return Collection::make([
+                        'uri' => $this->endpointWithParam(ModelName::factory()->create()->id),
+                        'user' => User::factory()->superAdmin()->create(),
+                        'payload' => collect(ModelName::factory()->definition())->put('image', $image)->all(),
+                    ]);
+                },
+                function (): Collection {
+                    return Collection::make([
+                        'status' => Response::HTTP_UNPROCESSABLE_ENTITY,
+                        'data' => []
+                    ]);
+                }
+            ];
+        }
+
+        yield 'Forbidden' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpointWithParam(ModelName::factory()->create()->id),
+                    'user' => User::factory()->create(),
+                    'payload' => ModelName::factory()->definition(),
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_FORBIDDEN,
+                    'data' => []
+                ]);
+            }
+        ];
+    }
+
+    /**
+     * Delete data provider.
+     *
+     * @return \Closure[]
+     */
+    public function provideDeleteData()
+    {
+        yield 'As super admin' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpointWithParam(ModelName::factory()->create()->id),
+                    'user' => User::factory()->superAdmin()->create()
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_NO_CONTENT
+                ]);
+            }
+        ];
+
+        yield 'As Admin with privileges' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpointWithParam(ModelName::factory()->create()->id),
+                    'user' => User::factory()->adminWithPrivileges(ModelName::class, [Privilege::DELETE, Privilege::FORCE_DELETE])->create()
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_NO_CONTENT
+                ]);
+            }
+        ];
+
+        yield 'Forbidden' => [
+            function (): Collection {
+                return Collection::make([
+                    'uri' => $this->endpointWithParam(ModelName::factory()->create()->id),
+                    'user' => User::factory()->create(),
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_FORBIDDEN
+                ]);
+            }
+        ];
+    }
+
+    /**
+     * Restore data provider.
+     *
+     * @return \Closure[]
+     */
+    public function provideRestoreData()
+    {
+        yield 'As Super Admin' => [
+            function (): Collection {
+                $model = ModelName::factory()->create();
+                $model->delete();
+                return Collection::make([
+                    'uri' => $this->endpointWithParam($model->id, '/restore'),
+                    'user' => User::factory()->superAdmin()->create(),
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_NO_CONTENT
+                ]);
+            }
+        ];
+
+        yield 'As Admin with privileges' => [
+            function (): Collection {
+                $model = ModelName::factory()->create();
+                $model->delete();
+                return Collection::make([
+                    'uri' => $this->endpointWithParam($model->id, '/restore'),
+                    'user' => User::factory()->adminWithPrivileges(ModelName::class, Privilege::RESTORE)->create(),
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_NO_CONTENT
+                ]);
+            }
+        ];
+
+        yield 'Forbidden' => [
+            function (): Collection {
+                $model = ModelName::factory()->create();
+                $model->delete();
+                return Collection::make([
+                    'uri' => $this->endpointWithParam($model->id, '/restore'),
+                    'user' => User::factory()->create(),
+                ]);
+            },
+            function (): Collection {
+                return Collection::make([
+                    'status' => Response::HTTP_FORBIDDEN
+                ]);
+            }
+        ];
+    }
+}

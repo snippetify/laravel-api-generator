@@ -1,0 +1,184 @@
+<?php
+
+namespace Tests\Feature\ModuleName;
+
+use Tests\TestCase;
+use Laravel\Sanctum\Sanctum;
+use Tests\Feature\Traits\EndpointTrait;
+use Database\Seeders\ModuleName\ModelNameSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\Feature\Data\ModuleName\ModelNameTestDataTrait;
+
+class ModelNameTest extends TestCase
+{
+    use RefreshDatabase;
+    use EndpointTrait;
+    use ModelNameTestDataTrait;
+
+    /**
+     * ModelName endpoint.
+     */
+    private $endpoint = '/api/module_name/models_name';
+
+    /**
+     * Test list.
+     *
+     * @dataProvider provideListData
+     *
+     * @param \Closure $getInput
+     * @param \Closure $getOutput
+     *
+     * @return void
+     */
+    public function testList(\Closure $getInput, \Closure $getOutput): void
+    {
+        $this->seed(ModelNameSeeder::class);
+
+        $input  = $getInput();
+        $output = $getOutput();
+
+        Sanctum::actingAs($input->get('user'));
+
+        $this->getJson($input->get('uri'))
+            ->assertStatus($output->get('status'))
+            ->assertJson($output->get('data'));
+    }
+
+    /**
+     * Test store as super admin.
+     *
+     * @dataProvider provideStoreData
+     *
+     * @param \Closure $getInput
+     * @param \Closure $getOutput
+     *
+     * @return void
+     */
+    public function testStore(\Closure $getInput, \Closure $getOutput): void
+    {
+        $input = $getInput();
+
+        Sanctum::actingAs($input->get('user'));
+
+        $response = $this->postJson($input->get('uri'), $input->get('payload')); 
+        $output   = $getOutput();
+
+        $response
+            ->assertStatus($output->get('status'))
+            ->assertJson($output->get('data'));
+
+        $this->assertTrue($output->get('log', true)); // Test spatie log activity
+        $this->assertTrue($output->get('image', true)); // Test spatie image upload
+    }
+
+    /**
+     * Test show.
+     *
+     * @dataProvider provideShowData
+     *
+     * @param \Closure $getInput
+     * @param \Closure $getOutput
+     *
+     * @return void
+     */
+    public function testShow(\Closure $getInput, \Closure $getOutput): void
+    {
+        $input  = $getInput();
+        $output = $getOutput();
+
+        Sanctum::actingAs($input->get('user'));
+
+        $this->getJson($input->get('uri'))
+            ->assertStatus($output->get('status'));
+    }
+
+    /**
+     * Test update.
+     *
+     * @dataProvider provideUpdateData
+     *
+     * @param \Closure $getInput
+     * @param \Closure $getOutput
+     *
+     * @return void
+     */
+    public function testUpdate(\Closure $getInput, \Closure $getOutput): void
+    {
+        $input = $getInput();
+
+        Sanctum::actingAs($input->get('user'));
+
+        $response = $this->putJson($input->get('uri'), $input->get('payload'));
+        $output   = $getOutput();
+
+        $response
+            ->assertStatus($output->get('status'))
+            ->assertJson($output->get('data'));
+
+        $this->assertTrue($output->get('log', true)); // Test spatie log activity
+        $this->assertTrue($output->get('image', true)); // Test spatie image upload
+    }
+
+    /**
+     * Test delete.
+     *
+     * @dataProvider provideDeleteData
+     *
+     * @param \Closure $getInput
+     * @param \Closure $getOutput
+     *
+     * @return void
+     */
+    public function testDelete(\Closure $getInput, \Closure $getOutput): void
+    {
+        $input  = $getInput();
+        $output = $getOutput();
+
+        Sanctum::actingAs($input->get('user'));
+
+        $this->deleteJson($input->get('uri'))
+            ->assertStatus($output->get('status'));
+    }
+
+    /**
+     * Test force delete.
+     *
+     * @dataProvider provideDeleteData
+     *
+     * @param \Closure $getInput
+     * @param \Closure $getOutput
+     *
+     * @return void
+     */
+    public function testForceDelete(\Closure $getInput, \Closure $getOutput): void
+    {
+        $input  = $getInput();
+        $output = $getOutput();
+        
+        Sanctum::actingAs($input->get('user'));
+
+        $this->deleteJson($input->get('uri'), ['force_delete' => true])
+            ->assertStatus($output->get('status'));
+    }
+
+    /**
+     * Test restore.
+     *
+     * @dataProvider provideRestoreData
+     *
+     * @param \Closure $getInput
+     * @param \Closure $getOutput
+     *
+     * @return void
+     */
+    public function testRestore(\Closure $getInput, \Closure $getOutput): void
+    {
+        $input  = $getInput();
+        $output = $getOutput();
+        
+        Sanctum::actingAs($input->get('user'));
+
+        $this->patchJson($input->get('uri'))
+            ->assertStatus($output->get('status'));
+    }
+}

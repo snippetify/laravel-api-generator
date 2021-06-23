@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Traits;
+
+use Illuminate\Database\Eloquent\Builder;
+
+trait StudlyNameTrait
+{
+    /**
+     * Set StudlyName attribute
+     */
+    public function setStudlyNameAttribute($value)
+    {
+        if ($value && !empty($this->attributes['snake_name'])) return;
+
+        $this->attributes['snake_name'] = $value ? now() : null;
+    }
+
+    /**
+     * Get StudlyName attribute
+     */
+    public function getStudlyNameAttribute()
+    {
+        return !$this->trashed() && ((int)$this->snake_name) > 0 && $this->snake_name <= now()->timestamp;
+    }
+
+    /**
+     * StudlyName scope
+     */
+    public function scopeWhereStudlyName(Builder $builder, $value = true)
+    {
+        return $value ? $builder->whereNotNull('snake_name') : $builder->whereNull('snake_name');
+    }
+}

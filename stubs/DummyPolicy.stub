@@ -1,0 +1,115 @@
+<?php
+
+namespace App\Policies\ModuleName;
+
+use App\Enums\Privilege;
+use App\Models\User\User;
+use App\Models\ModuleName\ModelName;
+use Illuminate\Auth\Access\HandlesAuthorization;
+
+class ModelNamePolicy
+{
+    use HandlesAuthorization;
+
+    /**
+     * Determine if super admin
+     *
+     * @param  \App\Models\User\User  $user
+     * @param  mixed  $ability
+     * @return mixed
+     */
+    public function before(?User $user, $ability)
+    {
+        if(optional(auth()->user())->isSuperAdmin) return true;
+    }
+
+    /**
+     * Determine whether the user can view any books.
+     *
+     * @param  \App\Models\User\User  $user
+     * @return mixed
+     */
+    public function viewAny(?User $user, String $trashed = null)
+    {
+        if (!is_null($trashed)) {
+            return optional($user)->hasPrivilege(ModelName::class, Privilege::VIEW_ANY_DELETED);
+        }
+
+        return optional($user)->hasPrivilege(ModelName::class, Privilege::VIEW_ANY);
+    }
+
+    /**
+     * Determine whether the user can view the book.
+     *
+     * @param  \App\Models\User\User  $user
+     * @param  \App\Models\ModuleName\ModelName  $model
+     * @return mixed
+     */
+    public function view(?User $user, ModelName $model)
+    {
+        if ($model->trashed()) {
+            return optional($user)->hasPrivilege(ModelName::class, Privilege::VIEW_DELETED);
+        }
+
+        return optional($user)->hasPrivilege(ModelName::class, Privilege::VIEW);
+    }
+
+    /**
+     * Determine whether the user can create books.
+     *
+     * @param  \App\Models\User\User  $user
+     * @return mixed
+     */
+    public function create(User $user)
+    {
+        return $user->hasPrivilege(ModelName::class, Privilege::CREATE);
+    }
+
+    /**
+     * Determine whether the user can update the book.
+     *
+     * @param  \App\Models\User\User  $user
+     * @param  \App\Models\ModuleName\ModelName  $model
+     * @return mixed
+     */
+    public function update(User $user, ModelName $model)
+    {
+        return $user->hasPrivilege(ModelName::class, Privilege::UPDATE);
+    }
+
+    /**
+     * Determine whether the user can delete the book.
+     *
+     * @param  \App\Models\User\User  $user
+     * @param  \App\Models\ModuleName\ModelName  $model
+     * @return mixed
+     */
+    public function delete(User $user, ModelName $model)
+    {
+        return $user->hasPrivilege(ModelName::class, Privilege::DELETE);
+    }
+
+    /**
+     * Determine whether the user can restore the book.
+     *
+     * @param  \App\Models\User\User  $user
+     * @param  \App\Models\ModuleName\ModelName  $model
+     * @return mixed
+     */
+    public function restore(User $user, ModelName $model)
+    {
+        return $user->hasPrivilege(ModelName::class, Privilege::RESTORE);
+    }
+
+    /**
+     * Determine whether the user can permanently delete the book.
+     *
+     * @param  \App\Models\User\User  $user
+     * @param  \App\Models\ModuleName\ModelName  $model
+     * @return mixed
+     */
+    public function forceDelete(User $user, ModelName $model)
+    {
+        return $user->hasPrivilege(ModelName::class, Privilege::FORCE_DELETE);
+    }
+}
