@@ -1,0 +1,51 @@
+{
+    "name": "snippetify/laravel-api-generator",
+    "description": "Api generator for Laravel",
+    "type": "library",
+    "homepage": "https://github.com/snippetify/laravel-api-generator",
+    "keywords": [
+        "api",
+        "api generator",
+        "generator",
+        "scaffolding"
+    ],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Evens Pierre",
+            "email": "pierrevensy@gmail.com"
+        },
+        {
+            "name": "Snippetify Community",
+            "homepage": "https://github.com/snippetify"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "Snippetify\\ApiGenerator\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Snippetify\\ApiGenerator\\Tests\\": "tests/"
+        }
+    },
+    "require": {
+        "php": "^7.3 || ^8.0",
+        "illuminate/support": "^7|^8|^9"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^4.0|^5.0|^6.0"
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Snippetify\\ApiGenerator\\ApiGeneratorServiceProvider"
+            ]
+        }
+    }
+}
