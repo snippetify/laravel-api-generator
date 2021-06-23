@@ -11,8 +11,7 @@
 namespace Snippetify\ApiGenerator;
 
 use Illuminate\Support\ServiceProvider;
-use Snippetify\SnippetSniffer\WebCrawler;
-use Snippetify\SnippetSniffer\SnippetSniffer;
+use Snippetify\ApiGenerator\Commands\ApiGenerator;
 use Illuminate\Contracts\Support\DeferrableProvider;
 
 class ApiGeneratorServiceProvider extends ServiceProvider implements DeferrableProvider
@@ -35,6 +34,7 @@ class ApiGeneratorServiceProvider extends ServiceProvider implements DeferrableP
     public function boot()
     {
         $this->publishConfig($this->getConfigPath());
+        $this->registerCommands();
     }
 
     /**
@@ -78,15 +78,21 @@ class ApiGeneratorServiceProvider extends ServiceProvider implements DeferrableP
      */
     protected function registerServices()
     {
-        $this->app->bind('apigenerator.crawler', function ($app) {
-            $config = $app->make('config');
-            return new WebCrawler($config->get('apigenerator', []));
-        });
+        //
+    }
 
-        $this->app->bind('apigenerator.sniffer', function ($app) {
-            $config = $app->make('config');
-            return new SnippetSniffer($config->get('apigenerator', []));
-        });
+    /**
+     * Register commands.
+     *
+     * @return void
+     */
+    protected function registerCommands()
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                ApiGenerator::class,
+            ]);
+        }
     }
 
     /**
@@ -96,8 +102,7 @@ class ApiGeneratorServiceProvider extends ServiceProvider implements DeferrableP
      */
     protected function registerAliases()
     {
-        $this->app->alias('apigenerator.crawler', WebCrawler::class);
-        $this->app->alias('apigenerator.sniffer', SnippetSniffer::class);
+        //
     }
 
     /**
@@ -107,9 +112,6 @@ class ApiGeneratorServiceProvider extends ServiceProvider implements DeferrableP
      */
     public function provides()
     {
-        return [
-            'apigenerator.crawler',
-            'apigenerator.sniffer',
-        ];
+        return [];
     }
 }
