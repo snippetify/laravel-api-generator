@@ -177,7 +177,7 @@ class ApiGeneratorGenerator extends Command
                     {
                         return \$this->{$relation}({$items['type']}::class{$morphable});
                     }
-                    
+
                     ";
                     if ($items['with']) {
                         $with .= "'".Str::snake($key)."', ";
@@ -401,9 +401,8 @@ class ApiGeneratorGenerator extends Command
             $content .= "
 /** $module - $model **/
 Route::name('$modLower.')->group(function () {
-    Route::name('$plural.filter')->get('$modLower/$plural/filter', [\App\Http\Controllers\\".$module."\\".$model."Controller::class, 'filter']);
     Route::name('$plural.restore')->patch('$modLower/$plural/{model}/restore', [\App\Http\Controllers\\".$module."\\".$model."Controller::class, 'restore']);
-    Route::name('$plural.toggle-activated-many')->put('$modLower/$plural/toggle-activated-many', [\App\Http\Controllers\\".$module."\\".$model."Controller::class, 'massToggleActivated']);
+    Route::name('$plural.toggle-many')->put('$modLower/$plural/toggle-many', [\App\Http\Controllers\\".$module."\\".$model."Controller::class, 'massToggle']);
     Route::name('$plural.delete-many')->delete('$modLower/$plural/delete-many', [\App\Http\Controllers\\".$module."\\".$model."Controller::class, 'massDestroy']);
     Route::apiResource('$modLower/$plural', \App\Http\Controllers\\".$module."\\".$model."Controller::class)->parameters(['$plural' => 'model']);
 });            
