@@ -8,27 +8,21 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
-use App\Traits\HasLogsTrait;
-use App\Traits\HasUserTrait;
-use App\Traits\CreateInstanceTrait;
 %%importtraits%%
 
 class ModelName extends Model %%implementsHasMedia%%
 {
     use HasFactory;
-    use SoftDeletes;
-    use HasLogsTrait;
-    use HasUserTrait;
-    use CreateInstanceTrait;
     %%usetraits%%
+    use \Snippetify\ApiGenerator\Traits\CreateInstanceTrait;
 
     /**
-     * The attributes that aren't mass assignable.
+     * The attributes that are mass assignable.
      *
      * @var array
      */
-    protected $guarded = [
-        'id', 'deleted_at', 'updated_at', 'created_at'
+    protected $fillable = [
+        %%fillable%%
     ];
 
     /**
@@ -37,7 +31,7 @@ class ModelName extends Model %%implementsHasMedia%%
      * @var array
      */
     protected $with = [
-        //
+        %%with%%
     ];
 
     /**
@@ -46,7 +40,7 @@ class ModelName extends Model %%implementsHasMedia%%
      * @var array
      */
     protected $hidden = [
-        'deleted_at'
+        %%appends%%
     ];
 
     /**
@@ -55,7 +49,7 @@ class ModelName extends Model %%implementsHasMedia%%
      * @var array
      */
     protected $appends = [
-        //
+        %%appends%%
     ];
 
     /**
@@ -64,6 +58,7 @@ class ModelName extends Model %%implementsHasMedia%%
      * @var array
      */
     protected $casts = [
+        %%casts%%
         'deleted_at' => 'timestamp',
         'updated_at' => 'timestamp',
         'created_at' => 'timestamp',
@@ -80,6 +75,7 @@ class ModelName extends Model %%implementsHasMedia%%
 	    return \Database\Factories\ModuleName\ModelNameFactory::new();
 	}
 
+    %%relations%%
 
     /**
      * Filter scope

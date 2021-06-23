@@ -25,6 +25,13 @@ class ApiGeneratorGenerator extends Command
     protected $description = 'Generate API';
 
     /**
+     * The total of items created.
+     *
+     * @var integer
+     */
+    protected $itemsGenerated = 0;
+
+    /**
      * Create a new command instance.
      *
      * @return void
@@ -41,14 +48,22 @@ class ApiGeneratorGenerator extends Command
      */
     public function handle()
     {
+        // Get modules from configuration
+        $config = collect(config('apigenerator.modules', []));
+
         // Test if file exists
         // SAMS (Snippetify Api Model Skeleton)
-        if (Storage::disk('base')->missing('snippetify-ams.json')) {
-            $this->error("The 'snippetify-ams.json' is missing");
+        if ($config->isEmpty() && Storage::disk('base')->exists('snippetify-ams.json')) {
+            $config = collect(json_decode(Storage::disk('base')->get('snippetify-ams.json'), true));
+        }
+        
+        // If config is empty
+        if ($config->isEmpty()) {
+            $this->error("You must set a configuration in 'apigenerator.php' config file or create a 'snippetify-ams.json' file in your project root.");
             return;
         }
 
-        $config = collect(json_decode(Storage::disk('base')->get('snippetify-ams.json'), true));
+        $this->itemsGenerated = 0;
 
         collect($config->get('modules', []))
             ->each(function ($item) {
@@ -90,7 +105,7 @@ class ApiGeneratorGenerator extends Command
                 $this->makeRoute($module, $model);
             });
 
-        $this->info("Api items generated");
+        $this->info($this->itemsGenerated > 0 ? "Api items({$this->itemsGenerated}) generated" : "No items generated");
 
         return 0;
     }
@@ -103,34 +118,136 @@ class ApiGeneratorGenerator extends Command
         $this->makeFile(
             $module, 
             $model,
-            'stubs/DummyModel.stub', 
+            'stubs/DummyModel.stub',
             "app/Models/{$module}/{$model}.php",
             function ($value) use ($item) {
                 $use       = '';
+                $with      = '';
+                $casts     = '';
+                $hidden    = '';
                 $import    = '';
+                $fillable  = '';
+                $appends   = '';
                 $implement = '';
-                if (Arr::get($item, 'model.hasPublished')) {
-                    $use    .= 'use IsPublishedTrait;';
-                    $import .= 'use App\Traits\IsPublishedTrait;';
+                $relations = '';
+
+                // Foreach and set attributes
+                foreach (Arr::get($item, 'model.attributes') as $key => $items) {
+                    // Casts items
+                    if ('boolean' === $items['type']) {
+                        $casts .= "'".Str::snake($key)."' => '".$items['type']."', \n";
+                    }
+                    if ($items['fillable']) {
+                        $fillable .= "'".Str::snake($key)."', ";
+                    }
+                    if ($items['hidden']) {
+                        $hidden .= "'".Str::snake($key)."', ";
+                    }
                 }
+
+                // Foreach and set relations
+                foreach (Arr::get($item, 'model.relations') as $key => $items) {
+                    $name = $key;
+                    $relation = '';
+                    $morphable = '';
+                    if ($items['morph']) { // Polymorphic relationship
+                        if (collect(['oneToOne', 'manyToOne'])->contains($items['type'])) $relation = 'morphOne';
+                        else if ('oneToMany' === $items['type']) $relation = 'morphMany';
+                        else if ('manyToMany' === $items['type']) $relation = 'morphToMany';
+                        $morphable = ", ".Str::singular($key)."able";
+                        if ($items['inverse']) {
+                            if (collect(['oneToOne', 'manyToOne'])->contains($items['type'])) {
+                                $morphable = "";
+                                $relation = 'morphTo';
+                                $name = Str::singular($key)."able";
+                            }
+                            else if ('manyToMany' === $items['type']) $relation = 'morphedByMany';
+                        }
+                    } else {
+                        if (collect(['oneToOne', 'manyToOne'])->contains($items['type'])) $relation = 'belongsTo';
+                        else if ('oneToMany' === $items['type']) $relation = 'hasMany';
+                        else if ('manyToMany' === $items['type']) $relation = 'belongsToMany';
+                    }
+
+                    $relations .= "
+                    /**
+                     * Get the item's {$name}.
+                     */
+                    public function {$name}()
+                    {
+                        return \$this->{$relation}({$items['type']}::class{$morphable});
+                    }
+                    
+                    ";
+                    if ($items['with']) {
+                        $with .= "'".Str::snake($key)."', ";
+                    }
+                }
+
+                // Enable soft delete
+                if (Arr::get($item, 'model.softDelete')) {
+                    $use .= 'use SoftDeletes;';
+                    $hidden .= "'deleted_at', ";
+                }
+
+                // Create issers
+                foreach (Arr::get($item, 'model.issers') as $isser) {
+                    if (!empty($isser)) {
+                        $isserName = (string)Str::of($isser)->studly();
+                        $this->makeFile(
+                            'Traits',
+                            "{$isserName}Trait",
+                            'stubs/DummyIsserTrait.stub',
+                            "app/Traits/{$isserName}Trait.php",
+                            function ($isserValue) use ($isserName) {
+                                return Str::of($isserValue)
+                                    ->replace("StudlyName", $isserName)
+                                    ->replace("snake_name", Str::snake($isserName))
+                                ;
+                            }
+                        );
+                        $appends  .= "'".Str::snake($isserName)."', ";
+                        $fillable .= "'".Str::snake($isserName)."', ";
+                        $use      .= "use \App\Traits\{$isserName}Trait;";
+                    }
+                }
+
+                // Attach model to a user
+                if (Arr::get($item, 'model.hasUser')) {
+                    $use .= 'use \Snippetify\ApiGenerator\Traits\HasUserTrait;';
+                }
+
+                // Allow model to be loggable
+                if (Arr::get($item, 'model.hasLog')) {
+                    $use .= 'use \Snippetify\ApiGenerator\Traits\HasLogsTrait;';
+                }
+
+                // Make model searchable
                 if (Arr::get($item, 'model.isSearchable')) {
-                    $use    .= 'use SearchableTrait;';
-                    $import .= 'use App\Traits\SearchableTrait;';
+                    $use .= 'use \Snippetify\ApiGenerator\Traits\SearchableTrait;';
                 }
+
+                // Make model sluggable
                 if (Arr::get($item, 'model.hasSlug')) {
-                    $use    .= 'use SluggableTrait;';
-                    $import .= 'use App\Traits\SluggableTrait;';
+                    $use .= 'use \Snippetify\ApiGenerator\Traits\SluggableTrait;';
                 } else {
-                    $use    .= 'use HasRouteBindingTrait;';
-                    $import .= 'use App\Traits\HasRouteBindingTrait;';
+                    $use .= 'use \Snippetify\ApiGenerator\Traits\HasRouteBindingTrait;';
                 }
+
+                // Add media to model
                 if (Arr::get($item, 'model.hasMedia')) {
-                    $use    .= 'use HasMediaTrait;';
                     $implement = 'implements HasMedia';
-                    $import .= 'use App\Traits\HasMediaTrait;';
+                    $use      .= 'use \Snippetify\ApiGenerator\Traits\HasMediaTrait;';
                 }
+                
                 return Str::of($value)
+                    ->replace("%%with%%", $with)
+                    ->replace("%%casts%%", $casts)
+                    ->replace("%%hidden%%", $hidden)
                     ->replace("%%usetraits%%", $use)
+                    ->replace("%%appends%%", $appends)
+                    ->replace("%%fillable%%", $fillable)
+                    ->replace("%%relations%%", $relations)
                     ->replace("%%importtraits%%", $import)
                     ->replace("%%implementsHasMedia%%", $implement);
             }
@@ -300,7 +417,7 @@ Route::name('$modLower.')->group(function () {
     {
         $force = $this->option('force');
         
-        if (empty($module) || empty($model)) { // Test file missing
+        if (empty($module) || empty($model)) { // Test item missing
             $this->error("Module or model name cannot be empty.");
             return;
             
@@ -322,5 +439,7 @@ Route::name('$modLower.')->group(function () {
         if ($transform instanceof \Closure) { $content = $transform($content); }
 
         Storage::disk('base')->put($path, $content);
+        
+        $this->itemsGenerated++;
     }
 }
