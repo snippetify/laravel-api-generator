@@ -475,12 +475,8 @@ RELATIONS;
                 $modLower = Str::lower($module);
                 $plural   = Str::lower(Str::plural($model));
                 $media    = '$this->assertTrue($output->get(\'image\', true)); // Test spatie image upload';
-                if (!Arr::get($item, 'model.hasMedia')) {
-                    return Str::of($value)
-                        ->replace($media, '')
-                        ->replace('module_name', $modLower)
-                        ->replace('models_name', $plural);
-                }
+                $value    = Str::of($value)->replace('module_name', $modLower)->replace('models_name', $plural);
+                if (!Arr::get($item, 'model.hasMedia')) { return $value->replace($media, ''); }
                 return $value;
             }
         );
