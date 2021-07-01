@@ -232,30 +232,30 @@ RELATIONS;
 
                 // Attach model to a user
                 if (Arr::get($item, 'model.hasUser')) {
-                    $use .= "\tuse \Snippetify\ApiGenerator\Traits\HasUserTrait;\n";
+                    $use .= "\tuse \App\Traits\HasUserTrait;\n";
                 }
 
                 // Allow model to be loggable
                 if (Arr::get($item, 'model.hasLog')) {
-                    $use .= "\tuse \Snippetify\ApiGenerator\Traits\HasLogsTrait;\n";
+                    $use .= "\tuse \App\Traits\HasLogsTrait;\n";
                 }
 
                 // Make model searchable
                 if (Arr::get($item, 'model.isSearchable')) {
-                    $use .= "\tuse \Snippetify\ApiGenerator\Traits\SearchableTrait;\n";
-                }
-
-                // Make model sluggable
-                if (Arr::get($item, 'model.hasSlug')) {
-                    $use .= "\tuse \Snippetify\ApiGenerator\Traits\SluggableTrait;\n";
-                } else {
-                    $use .= "\tuse \Snippetify\ApiGenerator\Traits\HasRouteBindingTrait;\n";
+                    $use .= "\tuse \App\Traits\SearchableTrait;\n";
                 }
 
                 // Add media to model
                 if (Arr::get($item, 'model.hasMedia')) {
                     $implement = 'implements HasMedia';
-                    $use      .= "\tuse \Snippetify\ApiGenerator\Traits\HasMediaTrait;\n";
+                    $use      .= "\tuse \App\Traits\HasMediaTrait;\n";
+                }
+
+                // Make model sluggable
+                if (Arr::get($item, 'model.hasSlug')) {
+                    $use .= "\tuse \App\Traits\SluggableTrait;";
+                } else {
+                    $use .= "\tuse \App\Traits\HasRouteBindingTrait;";
                 }
                 
                 return Str::of($value)
