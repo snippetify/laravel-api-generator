@@ -163,9 +163,6 @@ class ApiGenerator extends Command
                     }
                 }
 
-                // Beautify by adding tab
-                if (!empty($casts)) { $casts .= "\t\t"; }
-
                 // Foreach and set relations
                 foreach (Arr::get($item, 'model.relations') as $key => $items) {
                     $name = $key;
@@ -230,6 +227,7 @@ RELATIONS;
                         $appends  .= "'".Str::snake($isserName)."', ";
                         $fillable .= "'".Str::snake($isserName)."', ";
                         $use      .= "\tuse \App\Traits\\{$isserName}Trait;\n";
+                        $casts .= "\t\t'".Str::snake($isserName)."_at' => 'timestamp', \n";
                     }
                 }
 
@@ -260,6 +258,9 @@ RELATIONS;
                 } else {
                     $use .= "\tuse \App\Traits\HasRouteBindingTrait;";
                 }
+
+                // Beautify by adding tab
+                if (!empty($casts)) { $casts .= "\t\t"; }
                 
                 return Str::of($value)
                     ->replace("%%with%%", $with)

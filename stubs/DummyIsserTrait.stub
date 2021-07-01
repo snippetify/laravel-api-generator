@@ -11,9 +11,9 @@ trait StudlyNameTrait
      */
     public function setStudlyNameAttribute($value)
     {
-        if ($value && !empty($this->attributes['snake_name'])) return;
+        if ($value && !empty($this->attributes['snake_name_at'])) return;
 
-        $this->attributes['snake_name'] = $value ? now() : null;
+        $this->attributes['snake_name_at'] = $value ? now() : null;
     }
 
     /**
@@ -21,7 +21,7 @@ trait StudlyNameTrait
      */
     public function getStudlyNameAttribute()
     {
-        return !$this->trashed() && ((int)$this->snake_name) > 0 && $this->snake_name <= now()->timestamp;
+        return !$this->trashed() && ((int)$this->snake_name_at) > 0 && $this->snake_name_at <= now()->timestamp;
     }
 
     /**
@@ -29,6 +29,6 @@ trait StudlyNameTrait
      */
     public function scopeWhereStudlyName(Builder $builder, $value = true)
     {
-        return $value ? $builder->whereNotNull('snake_name') : $builder->whereNull('snake_name');
+        return $value ? $builder->whereNotNull('snake_name_at') : $builder->whereNull('snake_name_at');
     }
 }
