@@ -377,7 +377,15 @@ RELATIONS;
                         if (!Str::contains($items['rules'], 'required')) {
                             $definitions .= '->nullable()';
                         }
-                        $definitions .= ";\n";
+                        $definitions .= ";\n\t\t\t";
+                    }
+
+                    // Add isser
+                    foreach (Arr::get($item, 'model.issers') as $isser) {
+                        if (!empty($isser)) {
+                            $isserName = (string)Str::of($isser)->snake();
+                            $definitions .= "\$table->timestamp('{$isserName}_at')->nullable();\n\t\t\t";
+                        }
                     }
     
                     return Str::of($value)
