@@ -25,7 +25,7 @@ return [
   // Or create a 'snippetify-ams.json' file in the root of your project
   'modules' => [
     // [
-    //   'name' => 'Article', // The name of your module in StudlyCase(PascalCase), for namespacing
+    //   'name' => 'Blog', // The name of your module in StudlyCase(PascalCase), for namespacing
     //   'model' => [
     //     'name' => 'Article', // The name of your model in StudlyCase(PascalCase)
     //     'hasUser' => true, // Is owned by a user,
@@ -44,5 +44,17 @@ return [
     //     ]
     //   ]
     // ]
+    ],
+
+    // App dependencies
+    "dependencies" => [
+      'algolia/algoliasearch-client-php' => '^2.8',
+      'fruitcake/laravel-cors' => '^2.0',
+      'guzzlehttp/guzzle' => '^7.0.1',
+      'laravel/sanctum' => '^2.8',
+      'laravel/scout' => '^8.6',
+      'spatie/laravel-activitylog' => '^3.16',
+      'spatie/laravel-medialibrary' => '^9.4',
+      'spatie/laravel-query-builder' => '^3.3'
   ]
 ];

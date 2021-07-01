@@ -14,7 +14,7 @@ use Illuminate\Support\ServiceProvider;
 use Snippetify\ApiGenerator\Commands\ApiGenerator;
 use Illuminate\Contracts\Support\DeferrableProvider;
 
-class ApiGeneratorServiceProvider extends ServiceProvider implements DeferrableProvider
+class ApiGeneratorServiceProvider extends ServiceProvider
 {
     /**
      * Get the path of the configuration file shipping with the package.

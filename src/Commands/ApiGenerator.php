@@ -6,10 +6,17 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Filesystem\Filesystem;
 
 class ApiGenerator extends Command
 {
+    /**
+     * The filesystem instance.
+     *
+     * @var \Illuminate\Filesystem\Filesystem
+     */
+    protected $files;
+    
     /**
      * The name and signature of the console command.
      *
@@ -36,9 +43,11 @@ class ApiGenerator extends Command
      *
      * @return void
      */
-    public function __construct()
+    public function __construct(Filesystem $files)
     {
         parent::__construct();
+
+        $this->files = $files;
     }
 
     /**
@@ -51,10 +60,14 @@ class ApiGenerator extends Command
         // Get modules from configuration
         $config = collect(config('apigenerator.modules', []));
 
+        // Add disks to filesystem
+        $this->info("Adding disks to filsystem.php file ");
+        $this->addDisksToFilesystem();
+
         // Test if file exists
         // SAMS (Snippetify Api Model Skeleton)
-        if ($config->isEmpty() && Storage::disk('base')->exists('snippetify-ams.json')) {
-            $config = collect(json_decode(Storage::disk('base')->get('snippetify-ams.json'), true));
+        if ($config->isEmpty() && $this->files->exists(base_path('snippetify-ams.json'))) {
+            $config = collect(json_decode($this->files->get(base_path('snippetify-ams.json')), true));
         }
         
         // If config is empty
@@ -65,8 +78,7 @@ class ApiGenerator extends Command
 
         $this->itemsGenerated = 0;
 
-        collect($config->get('modules', []))
-            ->each(function ($item) {
+        $config->each(function ($item) {
 
                 $module = Arr::get($item, 'name');
                 $model  = Arr::get($item, 'model.name');
@@ -104,7 +116,13 @@ class ApiGenerator extends Command
                 // Make route
                 $this->makeRoute($module, $model);
             });
+        
+            $this->info("Importing traits helpers");
+            $this->moveUtilities();
 
+            // $this->info("Adding dependencies to composer.json file ");
+            // $this->importComposerDepencies();
+        
         $this->info($this->itemsGenerated > 0 ? "Api items({$this->itemsGenerated}) generated" : "No items generated");
 
         return 0;
@@ -317,7 +335,7 @@ class ApiGenerator extends Command
     private function makeMigration($module, $model, $item)
     {
         $table = Str::snake(Str::plural($model));
-        if (!collect(Storage::disk('base')->allFiles('database/migrations'))
+        if (!collect($this->files->allFiles(database_path('migrations')))
             ->contains(function ($value) use ($table) {
                 return Str::of($value)->contains($table);
         })) {
@@ -328,7 +346,7 @@ class ApiGenerator extends Command
                 $model,
                 'stubs/DummyDatabaseMigration.stub',
                 "database/migrations/{$filename}.php",
-                function ($value) use ($table) {
+                function ($value) use ($table, $item) {
                     $definitions = '';
     
                     // Foreach attributes and set definitions
@@ -474,26 +492,29 @@ class ApiGenerator extends Command
         $path     = 'routes/api.php';
         $modLower = Str::lower($module);
         $plural   = Str::lower(Str::plural($model));
-        $content  = Storage::disk('base')->get($path);
+        $content  = $this->files->exists(base_path($path)) ? $this->files->get(base_path($path)) : "";
 
         if (!Str::of($content)->contains("'$modLower/$plural'")) {
-            $content .= "
+            $content .= <<<ROUTE
+
 /** $module - $model **/
 Route::name('$modLower.')->group(function () {
-    Route::name('$plural.restore')->patch('$modLower/$plural/{model}/restore', [\App\Http\Controllers\\".$module."\\".$model."Controller::class, 'restore']);
-    Route::name('$plural.toggle-many')->put('$modLower/$plural/toggle-many', [\App\Http\Controllers\\".$module."\\".$model."Controller::class, 'massToggle']);
-    Route::name('$plural.delete-many')->delete('$modLower/$plural/delete-many', [\App\Http\Controllers\\".$module."\\".$model."Controller::class, 'massDestroy']);
-    Route::apiResource('$modLower/$plural', \App\Http\Controllers\\".$module."\\".$model."Controller::class)->parameters(['$plural' => 'model']);
-});            
-";
+    Route::name('$plural.restore')->patch('$modLower/$plural/{model}/restore', [\App\Http\Controllers\\{$module}\\{$model}Controller::class, 'restore']);
+    Route::name('$plural.toggle-many')->put('$modLower/$plural/toggle-many', [\App\Http\Controllers\\{$module}\\{$model}Controller::class, 'massToggle']);
+    Route::name('$plural.delete-many')->delete('$modLower/$plural/delete-many', [\App\Http\Controllers\\{$module}\\{$model}Controller::class, 'massDestroy']);
+    Route::apiResource('$modLower/$plural', \App\Http\Controllers\\{$module}\\{$model}Controller::class)->parameters(['$plural' => 'model']);
+});
+
+ROUTE;
             
-            Storage::disk('base')->put($path, $content);
+            $this->files->put(base_path($path), $content);
         }
     }
 
     private function makeFile($module, $model, $stub, $path, ?\Closure $transform = null)
     {
-        $force = $this->option('force');
+        $force    = $this->option('force');
+        $stubPath = __DIR__."/../../{$stub}";
         
         if (empty($module) || empty($model)) { // Test item missing
             $this->error("Module or model name cannot be empty.");
@@ -501,23 +522,75 @@ Route::name('$modLower.')->group(function () {
             
         }
 
-        if (Storage::disk('base')->missing($stub)) { // Test file missing
-            $this->error("This file: $stub is missing");
+        if ($this->files->missing($stubPath)) { // Test file missing
+            $this->error("This file: {$stubPath} is missing");
             return;
             
         }
 
-        if (Storage::disk('base')->exists($path) && !$force) { // Test file exists
-            $this->error("This file: $path existed. Add --force to override it");
+        if ($this->files->exists(base_path($path)) && !$force) { // Test file exists
+            $this->warn("This file: $path existed. Add --force to override it");
             return;
         }
 
-        $content = Str::of(Storage::disk('base')->get($stub))->replace('ModuleName', $module)->replace('ModelName', $model);
+        $content = Str::of($this->files->get($stubPath))->replace('ModuleName', $module)->replace('ModelName', $model);
 
         if ($transform instanceof \Closure) { $content = $transform($content); }
 
-        Storage::disk('base')->put($path, $content);
+        // Ensure a directory exists
+        $this->files->ensureDirectoryExists(Str::of($path)->dirname());
+
+        // Save content to file
+        $this->files->put(base_path($path), $content);
         
         $this->itemsGenerated++;
+    }
+
+    private function importComposerDepencies()
+    {
+        $dependencies = collect(config('apigenerator.dependencies', []));
+
+        if ($this->files->exists(base_path('composer.json'))) {
+            $content = json_decode($this->files->get(base_path('composer.json')), true);
+            foreach ($dependencies as $key => $value) {
+                if (!Arr::has($content, "require.{$key}")) {
+                    Arr::set($content, "require.{$key}", $value);
+                }
+            }
+            $this->files->put(base_path('composer.json'), json_encode($content, JSON_PRETTY_PRINT));
+        }
+    }
+
+    private function addDisksToFilesystem()
+    {
+        if ($this->files->exists(config_path('filesystems.php'))) {
+            $content = collect($this->files->get(config_path('filesystems.php')));
+            if (!Arr::has($content, 'disks.base')) {
+                $this->files->copy(__DIR__.'/../../config/filesystems.php', config_path('filesystems.php'));
+            }
+        }
+    }
+
+    private function moveUtilities()
+    {
+        // Move app traits
+        foreach ($this->files->files(__DIR__.'/../Traits') as $key => $file) {
+            $name = (string) Str::of($file)->basename();
+            $filename = app_path("Traits/{$name}");
+            if ($this->files->missing($filename)) {
+                $this->files->ensureDirectoryExists(Str::of($filename)->dirname()); // Ensure a directory exists
+                $this->files->copy($file, $filename);
+            }
+        }
+
+        // Move app test traits
+        foreach ($this->files->files(__DIR__.'/../../tests/Feature/Traits') as $key => $file) {
+            $name = (string) Str::of($file)->basename();
+            $filename = base_path("tests/Feature/Traits/{$name}");
+            if ($this->files->missing($filename)) {
+                $this->files->ensureDirectoryExists(Str::of($filename)->dirname()); // Ensure a directory exists
+                $this->files->copy($file, $filename);
+            }
+        }
     }
 }
