@@ -186,17 +186,17 @@ class ApiGenerator extends Command
                         else if ('oneToMany' === $items['type']) $relation = 'hasMany';
                         else if ('manyToMany' === $items['type']) $relation = 'belongsToMany';
                     }
+                    $classname = (string) Str::start($items['class'], '\\');
+                    $relations .= <<<RELATIONS
+    /**
+     * Get the item's $name.
+     */
+    public function $name()
+    {
+        return \$this->$relation({$classname}::class{$morphable});
+    }
 
-                    $relations .= "
-                    /**
-                     * Get the item's {$name}.
-                     */
-                    public function {$name}()
-                    {
-                        return \$this->{$relation}({$items['type']}::class{$morphable});
-                    }
-
-                    ";
+RELATIONS;
                     if ($items['with']) {
                         $with .= "'".Str::snake($key)."', ";
                     }
@@ -204,7 +204,7 @@ class ApiGenerator extends Command
 
                 // Enable soft delete
                 if (Arr::get($item, 'model.softDelete')) {
-                    $use .= 'use SoftDeletes;';
+                    $use .= "\tuse SoftDeletes;\n";
                     $hidden .= "'deleted_at', ";
                 }
 
@@ -226,36 +226,36 @@ class ApiGenerator extends Command
                         );
                         $appends  .= "'".Str::snake($isserName)."', ";
                         $fillable .= "'".Str::snake($isserName)."', ";
-                        $use      .= "use \App\Traits\{$isserName}Trait;";
+                        $use      .= "\tuse \App\Traits\\{$isserName}Trait;\n";
                     }
                 }
 
                 // Attach model to a user
                 if (Arr::get($item, 'model.hasUser')) {
-                    $use .= 'use \Snippetify\ApiGenerator\Traits\HasUserTrait;';
+                    $use .= "\tuse \Snippetify\ApiGenerator\Traits\HasUserTrait;\n";
                 }
 
                 // Allow model to be loggable
                 if (Arr::get($item, 'model.hasLog')) {
-                    $use .= 'use \Snippetify\ApiGenerator\Traits\HasLogsTrait;';
+                    $use .= "\tuse \Snippetify\ApiGenerator\Traits\HasLogsTrait;\n";
                 }
 
                 // Make model searchable
                 if (Arr::get($item, 'model.isSearchable')) {
-                    $use .= 'use \Snippetify\ApiGenerator\Traits\SearchableTrait;';
+                    $use .= "\tuse \Snippetify\ApiGenerator\Traits\SearchableTrait;\n";
                 }
 
                 // Make model sluggable
                 if (Arr::get($item, 'model.hasSlug')) {
-                    $use .= 'use \Snippetify\ApiGenerator\Traits\SluggableTrait;';
+                    $use .= "\tuse \Snippetify\ApiGenerator\Traits\SluggableTrait;\n";
                 } else {
-                    $use .= 'use \Snippetify\ApiGenerator\Traits\HasRouteBindingTrait;';
+                    $use .= "\tuse \Snippetify\ApiGenerator\Traits\HasRouteBindingTrait;\n";
                 }
 
                 // Add media to model
                 if (Arr::get($item, 'model.hasMedia')) {
                     $implement = 'implements HasMedia';
-                    $use      .= 'use \Snippetify\ApiGenerator\Traits\HasMediaTrait;';
+                    $use      .= "\tuse \Snippetify\ApiGenerator\Traits\HasMediaTrait;\n";
                 }
                 
                 return Str::of($value)

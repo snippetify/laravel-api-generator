@@ -9,12 +9,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 %%importtraits%%
-
 class ModelName extends Model %%implementsHasMedia%%
 {
     use HasFactory;
-    %%usetraits%%
-    use \Snippetify\ApiGenerator\Traits\CreateInstanceTrait;
+%%usetraits%%
+    use \App\Traits\CreateInstanceTrait;
 
     /**
      * The attributes that are mass assignable.
@@ -40,7 +39,7 @@ class ModelName extends Model %%implementsHasMedia%%
      * @var array
      */
     protected $hidden = [
-        %%appends%%
+        %%hidden%%
     ];
 
     /**
@@ -75,7 +74,7 @@ class ModelName extends Model %%implementsHasMedia%%
 	    return \Database\Factories\ModuleName\ModelNameFactory::new();
 	}
 
-    %%relations%%
+%%relations%%
 
     /**
      * Filter scope
