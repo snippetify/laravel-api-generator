@@ -57,8 +57,7 @@ class ModelName extends Model %%implementsHasMedia%%
      * @var array
      */
     protected $casts = [
-        %%casts%%
-        'deleted_at' => 'timestamp',
+        %%casts%%'deleted_at' => 'timestamp',
         'updated_at' => 'timestamp',
         'created_at' => 'timestamp',
     ];

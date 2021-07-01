@@ -163,6 +163,9 @@ class ApiGenerator extends Command
                     }
                 }
 
+                // Beautify by adding tab
+                if (!empty($casts)) { $casts .= "\t\t"; }
+
                 // Foreach and set relations
                 foreach (Arr::get($item, 'model.relations') as $key => $items) {
                     $name = $key;
