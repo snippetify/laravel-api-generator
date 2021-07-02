@@ -172,7 +172,7 @@ class ApiGenerator extends Command
                         if (collect(['oneToOne', 'manyToOne'])->contains($items['type'])) $relation = 'morphOne';
                         else if ('oneToMany' === $items['type']) $relation = 'morphMany';
                         else if ('manyToMany' === $items['type']) $relation = 'morphToMany';
-                        $morphable = ", ".Str::singular($key)."able";
+                        $morphable = ", '".Str::singular($key)."able'";
                         if (isset($items['inverse']) && $items['inverse']) {
                             if (collect(['oneToOne', 'manyToOne'])->contains($items['type'])) {
                                 $morphable = "";
@@ -480,17 +480,18 @@ RELATION;
                 foreach (Arr::get($item, 'model.attributes') as $key => $items) {
                     switch ($items['type']) {
                         case 'boolean':
-                            $definitions .= "'{$key}' => \$this->faker->randomElement([true, false]),\n";
+                            $definitions .= "'{$key}' => \$this->faker->randomElement([true, false]),";
                             break;
                         case 'int':
                         case 'float':
                         case 'double':
                         case 'integer':
-                            $definitions .= "'{$key}' => \$this->faker->randomElement([true, false]),\n";
+                            $definitions .= "'{$key}' => \$this->faker->randomElement([true, false]),";
                             break;
                         default:
-                            $definitions .= "'{$key}' => \$this->faker->word,\n";
+                            $definitions .= "'{$key}' => \$this->faker->word,";
                     }
+                    $definitions .= "\n\t\t\t";
                 }
 
                 return Str::of($value)
