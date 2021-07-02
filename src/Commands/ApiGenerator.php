@@ -304,7 +304,7 @@ RELATIONS;
 
                 // Foreach attributes and set definitions
                 foreach (Arr::get($item, 'model.attributes') as $key => $items) {
-                    $definitions .= "'{$key}' => '{$items['rules']}',";
+                    $definitions .= "'{$key}' => '{$items['rules']}',\n\t\t\t";
                 }
 
                 return Str::of($value)
