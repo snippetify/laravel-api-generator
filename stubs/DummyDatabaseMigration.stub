@@ -16,7 +16,7 @@ class Create%%StudlyName%%Table extends Migration
         Schema::create('%%snake_name%%', function (Blueprint $table) {
             $table->id();
             %%definitions%%$table->timestamps();
-        });
+        });%%relation_table%%
     }
 
     /**
@@ -26,6 +26,6 @@ class Create%%StudlyName%%Table extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('%%snake_name%%');
+        %%drop_relation_table%%Schema::dropIfExists('%%snake_name%%');
     }
 }

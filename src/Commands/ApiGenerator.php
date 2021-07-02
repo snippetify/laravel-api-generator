@@ -352,6 +352,8 @@ RELATIONS;
                 "database/migrations/{$filename}.php",
                 function ($value) use ($table, $item) {
                     $definitions = '';
+                    $relationTable = '';
+                    $dropRelationTable = '';
     
                     // Foreach attributes and set definitions
                     foreach (Arr::get($item, 'model.attributes') as $key => $items) {
@@ -387,9 +389,59 @@ RELATIONS;
                             $definitions .= "\$table->timestamp('{$isserName}_at')->nullable();\n\t\t\t";
                         }
                     }
+
+                    // Add relationship
+                    foreach (Arr::get($item, 'model.relations') as $items) {
+                        if (!empty($items['foreign_key']) || !empty($items['foreign_key_1'])) {
+                            switch ($items['type']) {
+                                case 'oneToOne':
+                                case 'manyToOne':
+                                    if ($items['morph']) {
+                                        $name = $items['foreign_key'];
+                                        $definitions .= "\$table->morph('{$name}');\n\t\t\t";
+                                    } else {
+                                        $name = $items['foreign_key'];
+                                        $definitions .= "\$table->unsignedBigInteger('{$name}');\n\t\t\t";
+                                    }
+                                    break;
+                                    break;
+                                case 'manyToMany':
+                                    if ($items['morph']) {
+                                        $name = $items['table_name'];
+                                        $foreign_key_1 = $items['foreign_key_1'];
+                                        $foreign_key_2 = $items['foreign_key_2'];
+                                        $dropRelationTable .= "Schema::dropIfExists('$name');\n\t\t";
+                                        $relationTable .= <<<RELATION
+\n
+        Schema::create('$name', function (Blueprint \$table) {
+            \$table->timestamps();
+            \$table->unsignedBigInteger('$foreign_key_1');
+            \$table->morph('$foreign_key_2');
+        });
+RELATION;
+                                    } else {
+                                        $name = $items['table_name'];
+                                        $foreign_key_1 = $items['foreign_key_1'];
+                                        $foreign_key_2 = $items['foreign_key_2'];
+                                        $dropRelationTable .= "Schema::dropIfExists('$name');\n\t\t";
+                                        $relationTable .= <<<RELATION
+\n
+        Schema::create('$name', function (Blueprint \$table) {
+            \$table->timestamps();
+            \$table->unsignedBigInteger('$foreign_key_1');
+            \$table->unsignedBigInteger('$foreign_key_2');
+        });
+RELATION;
+                                    }
+                                    break;
+                            }
+                        }
+                    }
     
                     return Str::of($value)
                         ->replace("%%definitions%%", $definitions)
+                        ->replace("%%relation_table%%", $relationTable)
+                        ->replace("%%drop_relation_table%%", $dropRelationTable)
                         ->replace("%%snake_name%%", Str::snake($table))
                         ->replace("%%StudlyName%%", Str::studly($table))
                     ;
