@@ -168,12 +168,12 @@ class ApiGenerator extends Command
                     $name = $key;
                     $relation = '';
                     $morphable = '';
-                    if ($items['morph']) { // Polymorphic relationship
+                    if (isset($items['morph']) && $items['morph']) { // Polymorphic relationship
                         if (collect(['oneToOne', 'manyToOne'])->contains($items['type'])) $relation = 'morphOne';
                         else if ('oneToMany' === $items['type']) $relation = 'morphMany';
                         else if ('manyToMany' === $items['type']) $relation = 'morphToMany';
                         $morphable = ", ".Str::singular($key)."able";
-                        if ($items['inverse']) {
+                        if (isset($items['inverse']) && $items['inverse']) {
                             if (collect(['oneToOne', 'manyToOne'])->contains($items['type'])) {
                                 $morphable = "";
                                 $relation = 'morphTo';

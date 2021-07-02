@@ -36,15 +36,22 @@ return [
         'hasSlug' => true, // Add a slug to this model
         'issers' => [ 'published', 'activated' ], // Issers like isPublished, isActivated, etc...
         'attributes' => [
-          'name' => [ 'type' => 'string', 'rules' => '', 'fillable' => true, 'hidden' => false ],
+          'title' => [ 'type' => 'string', 'rules' => 'bail|required|string|max:255', 'fillable' => true, 'hidden' => false ],
+          'content' => [ 'type' => 'string', 'rules' => 'bail|required|string', 'fillable' => true, 'hidden' => false ],
+          'is_based' => [ 'type' => 'boolean', 'rules' => 'bail|nullable|boolean', 'fillable' => true, 'hidden' => false ],
         ],
         'relations' => [ // Relation types: oneToOne, oneToMany, manyToOne, manyToMany
-          'comments' => [ 'type' => 'oneToOne', 'class' => 'App\Models\Blog\Comment', 'morph' => false, 'with' => true, 'inverse' => true ],
-          'categories' => [ 'type' => 'oneToMany', 'class' => 'App\Models\Blog\Category', 'morph' => false, 'with' => true ],
+          'tag' => [ 'type' => 'oneToOne', 'class' => 'App\Models\Blog\Tag', 'morph' => false, 'with' => true, 'inverse' => true, 'foreign_key' => 'tag_id' ],
+          'image' => [ 'type' => 'oneToOne', 'class' => 'App\Models\Blog\Image', 'morph' => true, 'with' => true, 'inverse' => true, 'foreign_key' => 'imageable' ],
+          'user' => [ 'type' => 'manyToOne', 'class' => 'App\Models\User\User', 'morph' => false, 'with' => true, 'inverse' => true, 'foreign_key' => 'user_id' ],
+          'likes' => [ 'type' => 'manyToOne', 'class' => 'App\Models\Blog\Like', 'morph' => true, 'with' => true, 'inverse' => true, 'foreign_key' => 'likeable' ],
+          'comments' => [ 'type' => 'oneToMany', 'class' => 'App\Models\Blog\Comment', 'morph' => false, 'with' => true ],
+          'categories' => [ 'type' => 'manyToMany', 'class' => 'App\Models\Blog\Category', 'morph' => false, 'with' => true, 'table_name' => 'article_category', 'foreign_key_1' => 'article_id', 'foreign_key_2' => 'category_id'  ],
+          'tags' => [ 'type' => 'manyToMany', 'class' => 'App\Models\Blog\Tag', 'morph' => true, 'with' => true, 'table_name' => 'taggables', 'foreign_key_1' => 'tag_id', 'foreign_key_2' => 'taggable'  ],
         ]
       ]
     ]
-    ],
+  ],
 
     // App dependencies
     "dependencies" => [
